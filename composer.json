@@ -1,0 +1,13 @@
+{
+    "name": "sazanof/collab",
+    "description": "Free Mail, Calendar, Conferences for your company!",
+    "type": "project",
+    "license": "GNU Affero General Public License v3.0",
+    "authors": [
+        {
+            "name": "Mikhail Sazanov",
+            "email": "m@sazanof.ru"
+        }
+    ],
+    "require": {}
+}
