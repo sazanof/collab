@@ -3,11 +3,30 @@
     "description": "Free Mail, Calendar, Conferences for your company!",
     "type": "project",
     "license": "GNU Affero General Public License v3.0",
+    "scripts": {
+        "cs:fix":"tools/php-cs-fixer/vendor/bin/php-cs-fixer --config=.php-cs-fixer.php fix"
+    },
     "authors": [
         {
             "name": "Mikhail Sazanov",
             "email": "m@sazanof.ru"
         }
     ],
-    "require": {}
+    "require": {
+        "symfony/http-kernel": "^6.0",
+        "symfony/translation": "^6.0",
+        "symfony/routing": "^6.0",
+        "twig/twig": "^3.0",
+      "ext-curl": "*",
+        "vlucas/phpdotenv": "^5.5",
+        "doctrine/dbal": "^3.5",
+        "symfony/console": "^6.0",
+        "symfony/filesystem": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "CLB\\": "lib/",
+            "CLB\\Core\\": "core/"
+        }
+    }
 }
