@@ -5,6 +5,7 @@ namespace CLB\Core\Config;
 use CLB\Config\IConfig;
 use CLB\Core\Exceptions\ConfigurationNotFoundException;
 use CLB\File\File;
+use Symfony\Component\Filesystem\Path;
 
 class Config implements IConfig
 {
@@ -14,14 +15,22 @@ class Config implements IConfig
      * @param $fileName
      * @throws ConfigurationNotFoundException
      */
-    public function __construct($fileName){
-        $pathToConfig = realpath("../config/{$fileName}.php");
-        $fs = new File($pathToConfig);
-        if ($fs->exists($pathToConfig)){
-            $this->configArray = require_once($pathToConfig);
-        } else {
-            throw new ConfigurationNotFoundException();
+    public function __construct($fileName = null){
+        if(!is_null($fileName)){
+            if (php_sapi_name() == "cli") {
+                $pathToConfig = realpath("./config/{$fileName}.php");
+            } else {
+                $pathToConfig = realpath("../config/{$fileName}.php");
+            }
+
+            $fs = new File($pathToConfig);
+            if ($fs->exists($pathToConfig)){
+                $this->configArray = require($pathToConfig);
+            } else {
+                throw new ConfigurationNotFoundException();
+            }
         }
+        return $this;
     }
 
     public function getConfig(): array
@@ -32,6 +41,13 @@ class Config implements IConfig
     public function getConfigValue($key): mixed
     {
         return $this->configArray[$key];
+    }
+
+    public static function fromArray($configArray): Config
+    {
+        $c = (new self(null));
+        $c->configArray = $configArray;
+        return $c;
     }
 
     /**

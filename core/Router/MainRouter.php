@@ -15,11 +15,10 @@ use Symfony\Component\Routing\RouteCollection;
 
 class MainRouter implements IRouter
 {
-    protected $exclusions = [];
     /**
-     * @var RouteCollection|null
+     * @var RouteCollection
      */
-    protected RouteCollection|null $routes = null;
+    protected RouteCollection $routes;
     /**
      * @var Controller | null
      */
@@ -36,13 +35,13 @@ class MainRouter implements IRouter
         return $this;
     }
 
-    public function setRoute(string $url, string $method, array $action)
+    public function setRoute(string $url, array $methods, array $action)
     {
         $route = new Route($url, [
             '_controller' => $action,
-            '_method'=>$method,
+            '_method'=>$methods,
         ]);
-        $route->setMethods($method);
+        $route->setMethods($methods);
         $this->routes->add($url, $route);
         return $route;
     }
@@ -70,8 +69,15 @@ class MainRouter implements IRouter
         return $redirect->send();
     }
 
+    public function group($callback)
+    {
+        foreach (wrap($callback) as $route) {
+            dump($route);
+        }
+    }
+
     public function getRoute(string $url)
     {
-
+        // TODO: Implement getRoute() method.
     }
 }

@@ -10,7 +10,7 @@ use CLB\Database\Trait\Timestamps;
 #[ORM\Entity]
 #[ORM\Index(columns: ['id'], name: 'group_id')]
 #[ORM\Table(name: '`groups`')]
-class Groups
+class Group
 {
     use Timestamps;
 

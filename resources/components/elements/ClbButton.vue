@@ -19,6 +19,11 @@ export default {
 		border:1px solid var(--color-light);
 		border-radius: var(--border-radius);
 		transition: var(--transition-duration-mini);
+		
+		&:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
 	}
 	.btn-green {
 		background: var(--color-green);

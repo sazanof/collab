@@ -40,7 +40,11 @@
 
     "vue-loader": "^17.0.1",
 
-    "vue-material-design-icons": "^5.1.2"
+    "vue-material-design-icons": "^5.1.2",
+
+    "vue-toastification": "^2.0.0-rc.5",
+
+    "vuex": "^4.0.2"
 
   },
 

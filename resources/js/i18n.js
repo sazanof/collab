@@ -26,9 +26,10 @@ function loadLocaleMessages () {
 }
 
 export default createI18n({
+    // TODO доставать локаль по умолчанию аяксом
     legacy: false,
     globalInjection: true,
-    locale: process.env.DEFAULT_LOCALE || 'en',
-    fallbackLocale: process.env.DEFALT_FALLBACK_LOCALE || 'en',
+    locale: 'en',
+    fallbackLocale: 'en',
     messages: loadLocaleMessages(),
 })

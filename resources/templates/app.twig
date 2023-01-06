@@ -10,7 +10,11 @@
 <div id="app"></div>
 {% endblock %}
 {% block scripts %}
-<script type="text/javascript" src="http://collab.project:8080/main.js"></script>
+    {% if env('APP_MODE') == 'production' %}
+        <script type="text/javascript" src="{{ env('APP_SCHEME') }}://{{ env('APP_HOST') }}/dist/main.js"></script>
+    {% else %}
+        <script type="text/javascript" src="{{ env('APP_SCHEME') }}://{{ env('APP_HOST') }}:8080/main.js"></script>
+    {% endif %}
 {% endblock %}
 </body>
 </html>

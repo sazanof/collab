@@ -11,7 +11,7 @@ interface IRouter
 {
     public function registerRoutes($routes): IRouter;
 
-    public function setRoute(string $url, string $method, array $action);
+    public function setRoute(string $url, array $methods, array $action);
 
     public function matchRoute(string $url);
 
