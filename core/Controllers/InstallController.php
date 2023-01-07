@@ -10,7 +10,6 @@ use CLB\Database\Install\UpdateConfigAfterInstall;
 use CLB\File\File;
 use CLB\Serializer\JsonSerializer;
 use Doctrine\DBAL\Exception;
-use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\Tools\SchemaTool;
 use JetBrains\PhpStorm\ArrayShape;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
@@ -47,7 +46,7 @@ class InstallController extends Controller
     public function install($step, Request $request)
     {
         $c = new UpdateConfigAfterInstall();
-        dd($c);
+        $c->addBaseConfigValues();
         // TODO add $request->isXmlHttpRequest() to AXIOS;
         switch ($step) {
             case 1:
@@ -133,7 +132,7 @@ class InstallController extends Controller
         $u = User::create($admin);
         $result = [
             'env' => $file instanceof File,
-            'schema' => Database::$em->getConnection()->isConnected(),
+            'schema' => Database::getInstance()->getEntityManager()->getConnection()->isConnected(),
             'admin' => $u instanceof User
         ];
         // Remove File

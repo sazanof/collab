@@ -1,5 +1,4 @@
 <?php
-
 return [
     'driver' => env('DB_DRIVER'),
     'host' => env('DB_HOST'),

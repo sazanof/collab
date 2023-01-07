@@ -2,7 +2,7 @@
 
 namespace CLB\Core\Exceptions;
 
-class EntityManagerNotDefinedException extends \Exception
+class EntityManagerNotDefinedException extends CustomPageException
 {
     public function __construct(string $message = "Entity manager not defined", int $code = 11, ?\Throwable $previous = null)
     {

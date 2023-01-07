@@ -2,40 +2,44 @@
 
 namespace CLB\Database\Install;
 
+use CLB\Application\ApplicationUtilities;
 use CLB\Core\Config\Config;
-use \CLB\Core\Models\Config as ORMConfig;
-use CLB\Core\Config\DatabaseConfig;
-use CLB\Database\Database;
+use CLB\Core\Exceptions\EntityAlreadyExistsException;
+use CLB\Core\Models\Config as ORMConfig;
 use Doctrine\ORM\EntityManager;
 
-class UpdateConfigAfterInstall extends Database
+class UpdateConfigAfterInstall
 {
     protected Config $config;
-    protected EntityManager $entityManager;
+    protected ?EntityManager $entityManager = null;
+    protected ApplicationUtilities $utilities;
 
     /**
-     * @throws \Doctrine\ORM\Exception\MissingMappingDriverImplementation
      * @throws \Doctrine\DBAL\Exception
      */
     public function __construct()
     {
-        $this->config = new DatabaseConfig();
-        parent::__construct($this->config);
-        $this->entityManager = $this->getEntityManager();
+        $this->utilities = ApplicationUtilities::getInstance();
+        $this->entityManager = $this->utilities->getEntityManager();
     }
 
     /**
      * @throws \Throwable
      */
-    private function addBaseConfigValues(){
+    public function addBaseConfigValues(): void
+    {
         $app = 'app';
         $this->entityManager->getRepository(ORMConfig::class);
-        $this->entityManager->wrapInTransaction(function() use ($app){
+        try {
             ORMConfig::create([
                 'app' => $app,
                 'key' => 'version',
-                'value' => ''
+                'value' => $this->utilities->getVersion()
             ]);
-        });
+        } catch (EntityAlreadyExistsException $e) {
+
+        }
+
+
     }
 }

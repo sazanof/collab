@@ -3,7 +3,6 @@
 namespace CLB\Core;
 
 use CLB\Application\ApplicationUtilities;
-use CLB\Core\Config\Config;
 use CLB\Core\Exceptions\EntityManagerNotDefinedException;
 use CLB\Database\Database;
 use CLB\Database\IDatabase;
@@ -27,10 +26,10 @@ class Application
      * @var IRouter
      */
     protected IRouter $router;
-    protected IDatabase $connection;
+    protected ?IDatabase $connection = null;
     protected Dotenv $env;
     protected File $filesystem;
-    protected EntityManager $entityManager;
+    protected ?EntityManager $entityManager = null;
     protected ApplicationUtilities $utilities;
     public static string $configKey = 'app';
 
@@ -39,15 +38,31 @@ class Application
         $this->router = $router;
         $this->filesystem = new File(realpath('../'));
         $this->env = Dotenv::createImmutable(realpath('../'));
-        $this->utilities = new ApplicationUtilities();
         try {
             $this->env->load();
+        } catch (Exception $e){
+
+        };
+        $this->utilities = new ApplicationUtilities();
+        try {
             $this->connection = $this->initDatabaseConnection();
             $this->entityManager = $this->connection->getEntityManager();
             $this->utilities->setEntityManager($this->connection->getEntityManager());
-        } catch (\Doctrine\DBAL\Exception $e) {
 
+        } catch (\Doctrine\DBAL\Exception $e) {
         }
+
+    }
+
+    public function checkUpdates(){
+        if(!is_null($this->entityManager)){
+            try {
+                $this->utilities->checkVersion();
+            } catch (EntityManagerNotDefinedException $e) {
+            } catch (\Throwable $e) {
+            }
+        }
+
     }
 
     /**
@@ -57,11 +72,6 @@ class Application
     //TODO add Router redirect to update process...
     public function isAppInstalled()
     {
-        try {
-            $this->utilities->checkVersion();
-        } catch (EntityManagerNotDefinedException $exception) {
-            dd($exception);
-        }
         return !$this->filesystem->exists('../config/NOT_INSTALLED');
     }
 
@@ -70,8 +80,7 @@ class Application
      */
     private function initDatabaseConnection(): IDatabase
     {
-        $config = new Config('database');
-        return new Database($config);
+        return new Database();
     }
 
     public function watch(): RedirectResponse|bool

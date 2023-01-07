@@ -5,6 +5,7 @@ namespace CLB\Core\Controllers;
 use CLB\Controller\IController;
 use CLB\Core\Templates\TemplateRenderer;
 use CLB\Database\CustomEntityManager;
+use CLB\Database\Database;
 use CLB\File\File;
 use Doctrine\ORM\EntityManager;
 use Psr\Container\ContainerInterface;
@@ -23,7 +24,7 @@ class Controller implements IController
     public function __construct()
     {
         $this->filesystem = new File();
-        $this->em = CustomEntityManager::em();
+        $this->em = Database::getInstance()->getEntityManager();
         if($this->useTemplateRenderer){
             $this->templateRenderer = new TemplateRenderer();
         }

@@ -13,6 +13,7 @@ use Doctrine\Persistence\Event\LifecycleEventArgs;
 #[ORM\Table(name: '`config`')]
 #[ORM\UniqueConstraint(name: 'app_key', columns: ['app', 'key'])]
 #[ORM\Index(columns: ['app','key'], name: 'app_key')]
+#[ORM\HasLifecycleCallbacks]
 class Config extends Entity
 {
     use Timestamps;
@@ -93,6 +94,6 @@ class Config extends Entity
      */
     #[ORM\PrePersist]
     public function checkConfigOnDuplicate(LifecycleEventArgs $args){
-        $this->checkExistingRecords(['app' => $this->app, 'key' => $this->key], $args);
+       $this->checkExistingRecords(['app' => $this->app, 'key' => $this->key], $args);
     }
 }

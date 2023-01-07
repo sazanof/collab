@@ -8,11 +8,11 @@ use Doctrine\ORM\EntityManager;
 
 interface IDatabase
 {
-    public function getConfig($configName) : array;
+    public function getConfig() : array;
 
-    public function connect() : Connection;
+    public function connect() : Connection|null;
 
-    public function getEntityManager() : EntityManager;
+    public function getEntityManager() : EntityManager|null;
 
     public function chooseDriver() : self;
 }

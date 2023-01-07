@@ -3,44 +3,47 @@
 namespace CLB\Database;
 
 use CLB\Core\Exceptions\EntityAlreadyExistsException;
-use CLB\Core\Exceptions\UserAlreadyExistsException;
 use CLB\Serializer\JsonSerializer;
-use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
-use Doctrine\ORM\PessimisticLockException;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
-use SebastianBergmann\Diff\Exception;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Encoder\XmlEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Serializer;
 
 #[ORM\MappedSuperclass]
 class Entity
 {
     private static EntityManager $em;
+    private static ?Entity $instance = null;
 
-    private static function getStatic(): Entity
+    /**
+     * @throws \Doctrine\ORM\Exception\MissingMappingDriverImplementation
+     */
+    public static function getInstance(): Entity
     {
-        self::$em = Database::$em;
-        return new static();
+        if(is_null(self::$instance)) {
+            self::$instance = (new static());
+        }
+        return self::$instance;
     }
 
     public static function create(): Entity
     {
-        $class = self::getStatic();
+        $class = self::getInstance();
+        $em = Database::getInstance()->getEntityManager();
         $args = func_get_args();
         $class->fromArray($args[0]);
         try {
-            self::$em->persist($class);
-            self::$em->flush();
+            $em->persist($class);
+            $em->flush();
         } catch (OptimisticLockException|ORMException $e) {
             dump($e);
         }
         return $class;
+    }
+
+    public static function insertIgnore(){
+        $class = self::getInstance();
     }
 
     /**

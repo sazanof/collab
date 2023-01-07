@@ -3,6 +3,7 @@
 namespace CLB\Database;
 
 use CLB\Core\Config\Config;
+use CLB\Core\Config\DatabaseConfig;
 use CLB\Core\Events\TablePrefix;
 use Doctrine\Common\EventManager;
 use Doctrine\ORM\Configuration;
@@ -16,29 +17,39 @@ class Database implements IDatabase
 {
     protected Config $config;
     protected Configuration $configuration;
-    public Connection $connection;
-    public static ?EntityManager $em = null;
+    public ?Connection $connection=null;
+    protected static ?Database $instance = null;
+    protected ?EntityManager $entityManager = null;
 
     /**
      * @throws \Doctrine\DBAL\Exception
      */
-    public function __construct(Config $config) {
-        $this->config = $config;
+    public function __construct(Config $config = null) {
+        $this->config = is_null($config) ? new DatabaseConfig() : $config;
         $this->connection = $this->connect();
-        return $this;
+        self::$instance = $this;
         //dump($this->config, $this->connection);
     }
 
-    public function getConfig($configName): array
+    public static function getInstance(): Database
+    {
+        if(is_null(self::$instance)) {
+            //dump('no database instance');
+            self::$instance = (new self());
+        }
+        return self::$instance;
+    }
+
+    public function getConfig(): array
     {
         return $this->config->getConfig();
     }
 
     /**
-     * @return Connection
+     * @return Connection|null
      * @throws \Doctrine\DBAL\Exception
      */
-    public function connect(): Connection
+    public function connect(): Connection|null
     {
         $config = ORMSetup::createAttributeMetadataConfiguration(
             paths: array(realpath('../core/Models')),
@@ -49,16 +60,23 @@ class Database implements IDatabase
         $evm = new EventManager();
         $tablePrefix = new TablePrefix($this->config->getConfigValue('prefix'));
         $evm->addEventListener(Events::loadClassMetadata, $tablePrefix);
+        try {
+            return DriverManager::getConnection($this->config->getConfig(), $config, $evm);
+        } catch (\Doctrine\DBAL\Exception $e) {
+            return null;
+        }
 
-        return DriverManager::getConnection($this->config->getConfig(), $config, $evm);
     }
 
     /**
      * @throws \Doctrine\ORM\Exception\MissingMappingDriverImplementation
      */
-    public function getEntityManager() : EntityManager{
-        self::$em = self::$em instanceof EntityManager ? self::$em : new EntityManager($this->connection, $this->configuration);
-        return self::$em;
+    public function getEntityManager() : EntityManager|null {
+        if(!is_null($this->connection) && is_null($this->entityManager)){
+            $this->entityManager = new EntityManager($this->connection, $this->configuration);
+        }
+
+        return $this->entityManager;
     }
 
     public function chooseDriver(): IDatabase

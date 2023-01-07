@@ -18,28 +18,20 @@ class CustomEntityManager
     public function __construct()
     {
         try {
-            self::$database = new Database(new Config('database'));
+            self::$database = Database::getInstance();
         } catch (Exception $exception) {
             //dd(self::$database, $exception);
         }
+        self::$instance = $this;
 
 
     }
 
-    public static function getInstance(): void
+    public static function getInstance(): ?CustomEntityManager
     {
         if(is_null(self::$instance)) {
             self::$instance = (new self());
         }
-    }
-
-    public static function em(): ?EntityManager
-    {
-        self::getInstance();
-
-        if(is_null(self::$entityManager) && self::$database instanceof Database){
-            self::$entityManager = self::$database->getEntityManager();
-        }
-        return self::$entityManager;
+        return self::$instance;
     }
 }
