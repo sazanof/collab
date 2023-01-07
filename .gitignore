@@ -1,5 +1,5 @@
 #ENV
-.env.bak
+.env
 # Composer
 composer.phar
 /lib/Vendor

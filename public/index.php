@@ -7,6 +7,7 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 require_once '../vendor/autoload.php';
+
 use CLB\Core\Application;
 use CLB\Core\Router\MainRouter;
 // TODO add referer to route param to make work route only if referer is set & matches

@@ -2,16 +2,15 @@
 
 namespace CLB\Core;
 
+use CLB\Application\ApplicationUtilities;
 use CLB\Core\Config\Config;
+use CLB\Core\Exceptions\EntityManagerNotDefinedException;
 use CLB\Database\Database;
 use CLB\Database\IDatabase;
-use CLB\Database\QueryBuilder;
 use CLB\File\File;
 use CLB\Router\IRouter;
-use Doctrine\Migrations\Configuration\EntityManager\ExistingEntityManager;
 use Doctrine\ORM\EntityManager;
 use Dotenv\Dotenv;
-use Dotenv\Exception\InvalidPathException;
 use \Exception;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -32,23 +31,37 @@ class Application
     protected Dotenv $env;
     protected File $filesystem;
     protected EntityManager $entityManager;
+    protected ApplicationUtilities $utilities;
+    public static string $configKey = 'app';
 
     public function __construct(IRouter $router)
     {
         $this->router = $router;
         $this->filesystem = new File(realpath('../'));
         $this->env = Dotenv::createImmutable(realpath('../'));
+        $this->utilities = new ApplicationUtilities();
         try {
             $this->env->load();
             $this->connection = $this->initDatabaseConnection();
             $this->entityManager = $this->connection->getEntityManager();
-        } catch (Exception $exception) {
+            $this->utilities->setEntityManager($this->connection->getEntityManager());
+        } catch (\Doctrine\DBAL\Exception $e) {
 
         }
     }
 
+    /**
+     * @throws \Throwable
+     * @throws Exceptions\EntityManagerNotDefinedException
+     */
+    //TODO add Router redirect to update process...
     public function isAppInstalled()
     {
+        try {
+            $this->utilities->checkVersion();
+        } catch (EntityManagerNotDefinedException $exception) {
+            dd($exception);
+        }
         return !$this->filesystem->exists('../config/NOT_INSTALLED');
     }
 
@@ -68,6 +81,10 @@ class Application
             $matcher = $this->router->matchRoute($_SERVER['REQUEST_URI']);
             if (!$this->isAppInstalled() && !$matcher['public']) {
                 return $this->router->redirectTo('/install');
+            } else {
+                if($this->isAppInstalled() && $matcher['_route'] === '/install/{step}'){
+                    return $this->router->redirectTo('/');
+                }
             }
 
             $controllerResolver = new ControllerResolver();

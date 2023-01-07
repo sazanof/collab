@@ -25,7 +25,7 @@ class Controller implements IController
         $this->filesystem = new File();
         $this->em = CustomEntityManager::em();
         if($this->useTemplateRenderer){
-            $this->templateRenderer = new TemplateRenderer('../resources/templates');
+            $this->templateRenderer = new TemplateRenderer();
         }
     }
 

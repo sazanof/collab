@@ -2,19 +2,25 @@
 
 namespace CLB\Core\Models;
 
+use CLB\Database\Entity;
+use CLB\Database\IdGenerator;
 use CLB\Database\Trait\Timestamps;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\Persistence\Event\LifecycleEventArgs;
 
 #[ORM\Entity]
 #[ORM\Table(name: '`config`')]
-class Config
+#[ORM\UniqueConstraint(name: 'app_key', columns: ['app', 'key'])]
+#[ORM\Index(columns: ['app','key'], name: 'app_key')]
+class Config extends Entity
 {
     use Timestamps;
 
     #[ORM\Id]
     #[ORM\Column(type: Types::BIGINT)]
-    #[ORM\GeneratedValue]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: IdGenerator::class)]
     private int|null $id = null;
 
     #[ORM\Column(name: '`app`', type: Types::STRING, length: 64)]
@@ -80,5 +86,13 @@ class Config
     public function getValue(): string
     {
         return $this->value;
+    }
+
+    /**
+     * @throws \CLB\Core\Exceptions\EntityAlreadyExistsException
+     */
+    #[ORM\PrePersist]
+    public function checkConfigOnDuplicate(LifecycleEventArgs $args){
+        $this->checkExistingRecords(['app' => $this->app, 'key' => $this->key], $args);
     }
 }

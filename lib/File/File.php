@@ -48,6 +48,10 @@ class File extends Filesystem
 
     public function contentArray(): array
     {
-        return file($this->path);
+        return file($this->path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    }
+
+    public function dump($contents){
+        $this->dumpFile($this->path, $contents);
     }
 }

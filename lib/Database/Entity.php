@@ -2,8 +2,15 @@
 
 namespace CLB\Database;
 
+use CLB\Core\Exceptions\EntityAlreadyExistsException;
+use CLB\Core\Exceptions\UserAlreadyExistsException;
 use CLB\Serializer\JsonSerializer;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Exception\ORMException;
+use Doctrine\ORM\OptimisticLockException;
+use Doctrine\ORM\PessimisticLockException;
+use Doctrine\Persistence\Event\LifecycleEventArgs;
 use SebastianBergmann\Diff\Exception;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
@@ -30,8 +37,8 @@ class Entity
         try {
             self::$em->persist($class);
             self::$em->flush();
-        } catch (Exception $exception){
-            dump($exception);
+        } catch (OptimisticLockException|ORMException $e) {
+            dump($e);
         }
         return $class;
     }
@@ -79,5 +86,22 @@ class Entity
     public function toJSON(): string
     {
         return JsonSerializer::serializeStatic($this);
+    }
+
+    /**
+     * Check if Entity already exists
+     *
+     * @param array $fields
+     * @param LifecycleEventArgs $args
+     * @return void
+     * @throws EntityAlreadyExistsException
+     */
+    protected function checkExistingRecords(array $fields, LifecycleEventArgs $args): void
+    {
+        $obj = $args->getObject();
+        $repository = $args->getObjectManager()->getRepository($obj::class)->findOneBy($fields);
+        if($repository instanceof $obj) {
+            throw new EntityAlreadyExistsException($obj::class);
+        }
     }
 }

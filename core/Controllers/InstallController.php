@@ -6,9 +6,11 @@ use CLB\Core\Config\Config;
 use CLB\Core\Exceptions\UserAlreadyExistsException;
 use CLB\Core\Models\User;
 use CLB\Database\Database;
+use CLB\Database\Install\UpdateConfigAfterInstall;
 use CLB\File\File;
 use CLB\Serializer\JsonSerializer;
 use Doctrine\DBAL\Exception;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\Tools\SchemaTool;
 use JetBrains\PhpStorm\ArrayShape;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
@@ -44,14 +46,21 @@ class InstallController extends Controller
      */
     public function install($step, Request $request)
     {
+        $c = new UpdateConfigAfterInstall();
+        dd($c);
+        // TODO add $request->isXmlHttpRequest() to AXIOS;
         switch ($step) {
-            case 1: return $this->checkExtensions();
-            case 2: return $this->checkDatabaseConnection($request);
-            case 4: return $this->installApp($request);
-            default: return $this->templateRenderer->loadTemplate('/install/install',[
-                'host' => env('APP_HOST', $request->getHost()),
-                'scheme' => env('APP_SCHEME', $request->getScheme())
-            ]);
+            case 1:
+                return $this->checkExtensions();
+            case 2:
+                return $this->checkDatabaseConnection($request);
+            case 4:
+                return $this->installApp($request);
+            default:
+                return $this->templateRenderer->loadTemplate('/install/install', [
+                    'host' => env('APP_HOST', $request->getHost()),
+                    'scheme' => env('APP_SCHEME', $request->getScheme())
+                ]);
         }
     }
 
@@ -88,7 +97,7 @@ class InstallController extends Controller
         $config = Config::fromArray($request->request->all());
         $this->database = new Database($config);
         $success = false;
-        if($this->database->connection->connect()){
+        if ($this->database->connection->connect()) {
             $success = true;
         }
         return [
@@ -97,36 +106,86 @@ class InstallController extends Controller
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|\Doctrine\ORM\Exception\MissingMappingDriverImplementation
      */
-    public function installApp(Request $request){
-        // todo check connection anyway
-        $this->createEnv($request);
+    public function installApp(Request $request)
+    {
+        $file = $this->createEnv($request);
+
         $connection = $request->get('connection');
-        if(is_null($this->em)){
+        if (is_null($this->em)) {
             $this->em = $this->getDatabaseConnectionFromConfig($connection)->getEntityManager();
         }
         $this->createSchema();
+
+        //TODO Execute migrations, add data to Config ()
+
         $admin = $request->get('admin');
-        $existing = $this->em->getRepository(User::class)->findOneBy(['email' => $admin['email'], 'username' => $admin['username']]);
-        if($existing){
+        $existing = $this->em
+            ->getRepository(User::class)
+            ->findOneBy([
+                'email' => $admin['email'],
+                'username' => $admin['username']
+            ]);
+        if ($existing instanceof User) {
             throw new UserAlreadyExistsException();
         }
-        return JsonSerializer::serializeStatic(User::create($admin));
+        $u = User::create($admin);
+        $result = [
+            'env' => $file instanceof File,
+            'schema' => Database::$em->getConnection()->isConnected(),
+            'admin' => $u instanceof User
+        ];
+        // Remove File
+        $this->filesystem->remove('../config/NOT_INSTALLED');
+        return JsonSerializer::serializeStatic($result);
     }
 
-    public function createEnv($request){
+    public function createEnv(Request $request): File
+    {
         $file = new File('../', '.env');
         try {
             $file->get();
-        } catch (FileNotFoundException $exception){
+        } catch (FileNotFoundException $exception) {
             $file->create();
         }
 
         $contents = $file->contentArray();
-        asort($contents);
+        $ar = [];
+        foreach ($contents as $line) {
+            $l = explode('=',$line);
+            $ar[$l[0]] = $l[1];
+        }
 
-        dd($contents);
+        $connection = $request->get('connection');
+        $env = [
+            'APP_HOST' => $request->getHost(),
+            'APP_SCHEME' => $request->getScheme(),
+            'APP_NAME' => '"My Collab Project"',
+            'APP_MODE' => 'production',
+            'APP_WEBPACK_PROXY_HOST'=>$request->getScheme() . '://' . $request->getHost() . ':80',
+
+            'DEFAULT_LOCALE' => 'ru',
+            'DEFAULT_FALLBACK_LOCALE' => 'en',
+
+            'DB_DRIVER' => $connection['driver'],
+            'DB_HOST' => $connection['host'],
+            'DB_PORT' => $connection['port'],
+            'DB_DATABASE' => $connection['dbname'],
+            'DB_TABLE_PREFIX' => $connection['prefix'],
+            'DB_USER' => $connection['user'],
+            'DB_PASSWORD' => $connection['password']
+        ];
+        // Существующие строки в файле не перезаписываются!
+        $merged = array_merge($env, $ar); // from request $env, from existing $new
+        ksort($merged);
+
+        $contentToFile = '';
+        foreach ($merged as $key => $value) {
+            $contentToFile .= "{$key}={$value}" . PHP_EOL;
+        }
+        $file->dump($contentToFile);
+        return $file;
     }
 
     /**
@@ -137,10 +196,11 @@ class InstallController extends Controller
         $st = new SchemaTool($this->em);
         $files = Finder::create()->in('../core/Models')->name('*.php')->files();
         $meta = [];
-        foreach ($files as $file){
+        foreach ($files as $file) {
             $class = $file->getFilenameWithoutExtension();
             $meta[] = $this->em->getClassMetadata("\\CLB\\Core\\Models\\{$class}");
         }
         $st->updateSchema($meta);
+
     }
 }

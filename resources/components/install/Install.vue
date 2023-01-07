@@ -223,8 +223,25 @@
                     <div
                         class="install-step step"
                         v-if="step === 5">
-                        <div class="actions">
-                            Done
+                        <div class="installResult">
+                            <div
+                                class="res"
+                                v-for="(val, index) in installResult"
+                                :key="index">
+                                {{ $t(`Creating ${index}`) }}
+                                <Check
+                                    v-if="index"
+                                    size="18" />
+                                <Close
+                                    v-else
+                                    size="18" />
+                            </div>
+                        </div>
+                        <div class="actions center">
+                            <ClbButton
+                                class="btn-green">
+                                {{ $t('Let\'s get started') }}
+                            </ClbButton>
                         </div>
                     </div>
                 </div>
@@ -266,6 +283,9 @@ export default {
 			extensions: [],
 			connection: {},
 			admin: {},
+			loading: false,
+			installResult: [],
+			installed: false
 		}
 	},
 	computed: {
@@ -299,6 +319,9 @@ export default {
 	
 	watch: {
 		step() {
+			if(this.installed){
+				this.toStep(5)
+			}
 			switch (this.step) {
 				case 1:
 					this.heading = this.$t('Checking PHP extensions')
@@ -390,16 +413,16 @@ export default {
 			}
 		},
 		async install() {
-			await axios.post(`install/${this.step}`, this.dataToServer, {
+			this.loading = true
+			const res = await axios.post(`install/${this.step}`, this.dataToServer, {
 				headers: { 'Content-Type': 'multipart/form-data' },
+			}).catch(e => {
+				toast.error(e.response.data.message)
 			})
-				.then(res => {
-					console.log(res.data)
-				})
-				.catch(e => {
-					console.log(e.response.data)
-				})
-			//this.toStep(this.step + 1)
+			this.loading = false
+			this.installResult = res.data
+			this.toStep(this.step + 1)
+			this.installed = true
 		}
 	}
 }
@@ -494,6 +517,10 @@ export default {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
+				
+				&.center {
+					justify-content: center;
+				}
 			}
 		}
 	}
@@ -525,5 +552,11 @@ input {
 	.port {
 		width: 120px;
 	}
+}
+
+.res {
+	display: flex;
+	justify-content: space-between;
+	padding: 4px 0;
 }
 </style>

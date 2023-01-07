@@ -13,37 +13,18 @@ use Doctrine\ORM\Id\AbstractIdGenerator;
 class IdGenerator extends AbstractIdGenerator
 {
     /**
-     * The name of the sequence to pass to lastInsertId(), if any.
-     *
-     * @var string
-     */
-    private ?string $sequenceName;
-
-    /**
-     * Constructor.
-     *
-     * @param string|null $sequenceName The name of the sequence to pass to lastInsertId()
-     *                                  to obtain the last generated identifier within the current
-     *                                  database session/connection, if any.
-     */
-    public function __construct($sequenceName = null)
-    {
-        $this->sequenceName = $sequenceName;
-    }
-
-    /**
      * {@inheritDoc}
+     * @throws \Doctrine\DBAL\Exception
      */
     public function generate(EntityManager $em, $entity)
     {
-        return (int)$em->getConnection()->lastInsertId($this->sequenceName);
+        $table = $em->getClassMetadata($entity::class)->getTableName();
+        $maxId = $em->getConnection()->createQueryBuilder()
+            ->select('MAX(id)')
+            ->from($table)
+            ->executeQuery()
+            ->fetchOne();
+        return is_null($maxId) ? 1 : $maxId + 1;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function isPostInsertGenerator()
-    {
-        return true;
-    }
 }

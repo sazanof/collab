@@ -1,30 +1,37 @@
 <?php
 
 namespace CLB\Core\Models;
+use CLB\Core\Repositories\UserRepository;
 use CLB\Database\Entity;
+use CLB\Database\IdGenerator;
 use CLB\Database\Trait\Timestamps;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\Persistence\Event\LifecycleEventArgs;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Index(columns: ['id'], name: 'user_id')]
 #[ORM\Index(columns: ['email'], name: 'email')]
 #[ORM\Table(name: '`users`')]
+#[ORM\HasLifecycleCallbacks]
 class User extends Entity
 {
     use Timestamps;
 
     #[ORM\Id]
-    #[ORM\Column(type: Types::INTEGER)]
-    #[ORM\GeneratedValue]
-    private int $id;
+    #[ORM\Column(type: Types::INTEGER, columnDefinition: "INT AUTO_INCREMENT NOT NULL UNIQUE")]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: IdGenerator::class)]
+    private int|null $id = null;
 
     #[ORM\Column(type: Types::STRING, unique: true)]
     private string $username;
 
     #[ORM\Column(type: Types::STRING)]
+    #[Ignore]
     private string $password;
 
     #[ORM\Column(type: Types::STRING, unique: true)]
@@ -58,14 +65,6 @@ class User extends Entity
     }
 
     /**
-     * @param int|null $id
-     */
-    public function setId(?int $id): void
-    {
-        $this->id = $id;
-    }
-
-    /**
      * @return string
      */
     public function getUsername(): string
@@ -81,19 +80,13 @@ class User extends Entity
         $this->username = $username;
     }
 
-    /**
-     * @return string
-     */
-    public function getPassword(): string
-    {
-        return $this->password;
-    }
 
     /**
      * @param string $password
      */
     public function setPassword(string $password): void
     {
+        //TODO Hashing
         $this->password = $password;
     }
 
@@ -179,6 +172,14 @@ class User extends Entity
      */
     public function setPermissions(Collection $permissions): void
     {
-        $this->permissions = new ArrayCollection($permissions);
+        $this->permissions = new ArrayCollection((array)$permissions);
+    }
+
+    /**
+     * @throws \CLB\Core\Exceptions\EntityAlreadyExistsException
+     */
+    #[ORM\PrePersist]
+    public function checkUserOnDuplicate(LifecycleEventArgs $args){
+        $this->checkExistingRecords(['email' => $this->email, 'username' => $this->username], $args);
     }
 }
