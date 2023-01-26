@@ -3,48 +3,79 @@
 namespace CLB\Database;
 
 use CLB\Core\Exceptions\EntityAlreadyExistsException;
+use CLB\Core\Repositories\CollabRepository;
 use CLB\Serializer\JsonSerializer;
-use Doctrine\ORM\EntityManager;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\ORM\OptimisticLockException;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Persistence\ObjectRepository;
 
 #[ORM\MappedSuperclass]
-class Entity
+class Entity implements IEntity
 {
-    private static EntityManager $em;
-    private static ?Entity $instance = null;
+    protected string $table = '';
+    protected ?CustomEntityManager $em = null;
+    protected static ?Entity $instance = null;
+    protected ?Connection $connection = null;
+    protected ?AbstractPlatform $platform = null;
+    protected ?ORM\ClassMetadata $metadata = null;
+    protected QueryBuilder $qb;
+    protected string $className = '';
+    protected ObjectRepository|CollabRepository $repository;
+
+    protected array $fillable = [];
+
+    /**
+     * @throws \Doctrine\ORM\Exception\MissingMappingDriverImplementation
+     * @throws \Doctrine\DBAL\Exception
+     */
+    public function __construct()
+    {
+        $this->em = $this->em();
+        $this->qb = $this->em->createQueryBuilder();
+        $this->className = get_class($this);
+        $this->connection = $this->em->getConnection();
+        $this->metadata = $this->em->getClassMetadata($this->className);
+        $this->platform = $this->connection->getDatabasePlatform();
+        $this->repository = $this->em->getRepository($this->className);
+        self::$instance = $this;
+        return $this;
+    }
 
     /**
      * @throws \Doctrine\ORM\Exception\MissingMappingDriverImplementation
      */
-    public static function getInstance(): Entity
+    public function em(): ?CustomEntityManager
     {
-        if(is_null(self::$instance)) {
-            self::$instance = (new static());
+        return Database::getInstance()->getEntityManager();
+    }
+
+    public static function get(): ?Entity
+    {
+        if(is_null(self::$instance)){
+            return new static();
         }
         return self::$instance;
     }
 
-    public static function create(): Entity
+    public static function repository(): ObjectRepository|CollabRepository|\Doctrine\ORM\EntityRepository
     {
-        $class = self::getInstance();
-        $em = Database::getInstance()->getEntityManager();
-        $args = func_get_args();
-        $class->fromArray($args[0]);
-        try {
-            $em->persist($class);
-            $em->flush();
-        } catch (OptimisticLockException|ORMException $e) {
-            dump($e);
-        }
+        $class = self::get();
+        return $class->repository;
+    }
+
+    protected static function initClass(array $args): Entity
+    {
+        $class = new static();
+        $class->fromArray($args[0], $class->fillable);
         return $class;
     }
 
-    public static function insertIgnore(){
-        $class = self::getInstance();
-    }
+
 
     /**
      * Assign entity properties using an array
@@ -52,17 +83,43 @@ class Entity
      * @param array $attributes assoc array of values to assign
      * @return null
      */
-    public function fromArray(array $attributes)
+    public function fromArray(array $attributes, $allowedFields = array())
     {
         foreach ($attributes as $name => $value) {
-            if (property_exists($this, $name)) {
-                $methodName = $this->_getSetterName($name);
-                if ($methodName) {
-                    $this->{$methodName}($value);
-                } else {
-                    $this->$name = $value;
+            if (in_array($name, $allowedFields)) {
+                if (property_exists($this, $name)) {
+                    $methodName = $this->_getSetterName($name);
+                    if ($methodName) {
+                        $this->{$methodName}($value);
+                    } else {
+                        $this->$name = $value;
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Truncates the table
+     * @return void
+     */
+    public function truncate(): void
+    {
+        $this->em->beginTransaction();
+        try {
+            $this->em->getConnection()
+                ->executeQuery('SET FOREIGN_KEY_CHECKS=0');
+            $q = $this->em->getConnection()
+                ->getDatabasePlatform()
+                ->getTruncateTableSql(
+                    $this->metadata->getTableName()
+                );
+            $this->connection->executeQuery($q);
+            $this->connection->executeQuery('SET FOREIGN_KEY_CHECKS=1');
+            $this->connection->commit();
+        }
+        catch (\Exception) {
+            $this->em->rollback();
         }
     }
 
@@ -103,8 +160,61 @@ class Entity
     {
         $obj = $args->getObject();
         $repository = $args->getObjectManager()->getRepository($obj::class)->findOneBy($fields);
-        if($repository instanceof $obj) {
+        if ($repository instanceof $obj) {
             throw new EntityAlreadyExistsException($obj::class);
         }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function find(int $id): Entity
+    {
+        $class = self::get();
+        return $class->em->find($class->className, $id);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function create(): Entity
+    {
+        $args = func_get_args();
+        $class = self::initClass($args);
+        if(!is_null($class->em)){
+            try {
+                $class->em->persist($class);
+                $class->em->flush();
+                return $class;
+            } catch (EntityAlreadyExistsException $e) {
+                $class->em->detach($class);
+                $class->em->clear();
+                //return false;
+            } catch (ORMException|OptimisticLockException $e) {
+                //return false;
+            }
+        }
+        return $class;
+    }
+
+    /**
+     * @inheritDoc
+    */
+    public function update(array $arguments): static
+    {
+        $this->className = get_class($this);
+        $this->fromArray($arguments, $this->fillable);
+        $this->em()->persist($this);
+        $this->em()->flush();
+        return $this;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public static function updateStaticByID(int $id, array $arguments): static
+    {
+        $class = self::get();
+        return $class->em->find($class->className, $id)->update($arguments);
     }
 }

@@ -4,11 +4,9 @@ namespace CLB\Core\Controllers;
 
 use CLB\Controller\IController;
 use CLB\Core\Templates\TemplateRenderer;
-use CLB\Database\CustomEntityManager;
 use CLB\Database\Database;
 use CLB\File\File;
 use Doctrine\ORM\EntityManager;
-use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 class Controller implements IController

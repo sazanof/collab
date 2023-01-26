@@ -2,14 +2,14 @@
 
 namespace CLB\Core\Models;
 
+use CLB\Core\Repositories\ConfigRepository;
 use CLB\Database\Entity;
-use CLB\Database\IdGenerator;
 use CLB\Database\Trait\Timestamps;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: ConfigRepository::class)]
 #[ORM\Table(name: '`config`')]
 #[ORM\UniqueConstraint(name: 'app_key', columns: ['app', 'key'])]
 #[ORM\Index(columns: ['app','key'], name: 'app_key')]
@@ -20,8 +20,7 @@ class Config extends Entity
 
     #[ORM\Id]
     #[ORM\Column(type: Types::BIGINT)]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(class: IdGenerator::class)]
+    #[ORM\GeneratedValue]
     private int|null $id = null;
 
     #[ORM\Column(name: '`app`', type: Types::STRING, length: 64)]
@@ -32,6 +31,17 @@ class Config extends Entity
 
     #[ORM\Column(name: '`key`', type: Types::STRING, length: 255)]
     private string $key;
+
+    protected array $fillable = [
+        'app',
+        'key',
+        'value'
+    ];
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
 
     /**
      * @return int|null
@@ -95,5 +105,10 @@ class Config extends Entity
     #[ORM\PrePersist]
     public function checkConfigOnDuplicate(LifecycleEventArgs $args){
        $this->checkExistingRecords(['app' => $this->app, 'key' => $this->key], $args);
+    }
+
+    public static function repository(): ConfigRepository
+    {
+        return parent::repository();
     }
 }

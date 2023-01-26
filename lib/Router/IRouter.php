@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace CLB\Router;
 
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -18,4 +19,6 @@ interface IRouter
     public function getRoute(string $url);
 
     public function redirectTo(string $url) : RedirectResponse;
+
+    public function setDispatcher(EventDispatcher $dispatcher);
 }

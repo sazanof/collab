@@ -2,14 +2,20 @@
 
 namespace CLB\Core\Models;
 
+use CLB\Core\Repositories\PermissionsRepository;
+use CLB\Database\Entity;
 use CLB\Database\Trait\Timestamps;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
 
-#[ORM\Entity]
-#[ORM\Index(columns: ['type', 'action'], name: 't_a')]
+/**
+ * @method static PermissionsRepository repository()
+ */
+
+#[ORM\Entity(repositoryClass: PermissionsRepository::class)]
+#[ORM\Index(columns: ['type', 'action'], name: 'ata')]
 #[ORM\Table(name: '`permissions`')]
-class Permissions
+class Permissions extends Entity
 {
     use Timestamps;
 
@@ -63,5 +69,4 @@ class Permissions
     {
         $this->action = $action;
     }
-
 }

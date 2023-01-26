@@ -4,13 +4,14 @@ namespace CLB\Core;
 
 use CLB\Application\ApplicationUtilities;
 use CLB\Core\Exceptions\EntityManagerNotDefinedException;
+use CLB\Database\CustomEntityManager;
 use CLB\Database\Database;
 use CLB\Database\IDatabase;
 use CLB\File\File;
 use CLB\Router\IRouter;
-use Doctrine\ORM\EntityManager;
 use Dotenv\Dotenv;
 use \Exception;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,6 +20,7 @@ use Symfony\Component\HttpKernel\Controller\ArgumentResolver;
 use Symfony\Component\HttpKernel\Controller\ControllerResolver;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+use Throwable;
 
 class Application
 {
@@ -29,9 +31,10 @@ class Application
     protected ?IDatabase $connection = null;
     protected Dotenv $env;
     protected File $filesystem;
-    protected ?EntityManager $entityManager = null;
+    protected ?CustomEntityManager $entityManager = null;
     protected ApplicationUtilities $utilities;
-    public static string $configKey = 'app';
+    protected EventDispatcher $dispatcher;
+    public static string $configKey = 'core';
 
     public function __construct(IRouter $router)
     {
@@ -47,32 +50,40 @@ class Application
         try {
             $this->connection = $this->initDatabaseConnection();
             $this->entityManager = $this->connection->getEntityManager();
-            $this->utilities->setEntityManager($this->connection->getEntityManager());
-
+            if(!is_null($this->entityManager)){
+                $this->utilities->setEntityManager($this->entityManager);
+            }
         } catch (\Doctrine\DBAL\Exception $e) {
         }
 
+        $this->dispatcher = new EventDispatcher();
+        $this->utilities->setDispatcher($this->dispatcher);
+        $this->router->setDispatcher($this->dispatcher);
+        $this->utilities->setRouter($this->router);
+
+        $this->utilities->findApps(); // Register applications
     }
 
-    public function checkUpdates(){
+    public function checkUpdates(): void
+    {
         if(!is_null($this->entityManager)){
             try {
                 $this->utilities->checkVersion();
-            } catch (EntityManagerNotDefinedException $e) {
-            } catch (\Throwable $e) {
+            } catch (EntityManagerNotDefinedException|Throwable $e) {
             }
         }
 
     }
 
     /**
-     * @throws \Throwable
-     * @throws Exceptions\EntityManagerNotDefinedException
+     * @throws Throwable
      */
     //TODO add Router redirect to update process...
-    public function isAppInstalled()
+    public function isAppInstalled(): bool
     {
-        return !$this->filesystem->exists('../config/NOT_INSTALLED');
+        return !$this->filesystem->exists('../config/NOT_INSTALLED')
+            && $this->entityManager instanceof CustomEntityManager
+            && $this->utilities->getVersion() === $this->utilities->getDatabaseAppVersion()->value;
     }
 
     /**
@@ -101,7 +112,6 @@ class Application
             $request->attributes->add($matcher);
             $controller = $controllerResolver->getController($request);
             $arguments = $argumentResolver->getArguments($request, $controller);
-
             $r = call_user_func_array($controller, $arguments);
 
             // TODO move to bottom to customize error pages
@@ -118,13 +128,13 @@ class Application
         } catch (MethodNotAllowedException $exception) {
             //TODO custom page
             self::JsonResponseException($exception);
-        } catch (Exception $exception) {
+        } catch (Exception|Throwable $exception) {
             self::JsonResponseException($exception);
         }
         return true;
     }
 
-    private static function JsonResponseException(Exception $exception, $statusCode = 500): void
+    private static function JsonResponseException(Exception|\Error $exception, $statusCode = 500): void
     {
         $response = new JsonResponse([
             'code' => $exception->getCode(),
@@ -132,4 +142,6 @@ class Application
         ], $statusCode);
         $response->send();
     }
+
+
 }

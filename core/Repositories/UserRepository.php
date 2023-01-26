@@ -1,10 +1,10 @@
 <?php
 
 namespace CLB\Core\Repositories;
-
-use Doctrine\ORM\EntityRepository;
-
-class UserRepository extends EntityRepository
+/**
+ * @method static UserRepository repository()
+ */
+class UserRepository extends CollabRepository
 {
 
 }

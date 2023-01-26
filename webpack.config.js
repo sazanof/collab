@@ -11,6 +11,7 @@ module.exports = {
         main: '/resources/js/main.js',
         install: '/resources/js/install.js'
     },
+    performance: { hints: false },
     output: {
         path: path.resolve('./public/dist/'),
     },

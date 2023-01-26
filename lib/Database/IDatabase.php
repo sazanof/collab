@@ -12,7 +12,7 @@ interface IDatabase
 
     public function connect() : Connection|null;
 
-    public function getEntityManager() : EntityManager|null;
+    public function getEntityManager() : CustomEntityManager|null;
 
     public function chooseDriver() : self;
 }

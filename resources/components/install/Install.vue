@@ -230,7 +230,7 @@
                                 :key="index">
                                 {{ $t(`Creating ${index}`) }}
                                 <Check
-                                    v-if="index"
+                                    v-if="val"
                                     size="18" />
                                 <Close
                                     v-else
@@ -313,6 +313,7 @@ export default {
 			} else {
 				delete data.admin
 			}
+			data.locale = this.$i18n.locale
 			return data
 		}
 	},
@@ -410,6 +411,7 @@ export default {
 			if (result !== undefined) {
 				toast.success(this.$t('Connection established'))
 				this.connectionSuccess = true
+				this.step++
 			}
 		},
 		async install() {

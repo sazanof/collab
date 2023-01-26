@@ -2,6 +2,7 @@
 
 namespace CLB\Core\Models;
 
+use CLB\Database\Entity;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
@@ -10,7 +11,7 @@ use CLB\Database\Trait\Timestamps;
 #[ORM\Entity]
 #[ORM\Index(columns: ['id'], name: 'group_id')]
 #[ORM\Table(name: '`groups`')]
-class Group
+class Group extends Entity
 {
     use Timestamps;
 
@@ -21,4 +22,8 @@ class Group
 
     #[ORM\Column(type: Types::STRING, unique: true)]
     private string $name;
+
+    protected array $fillable = [
+        'name'
+    ];
 }

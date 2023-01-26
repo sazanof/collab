@@ -5,6 +5,7 @@ use CLB\Core\Repositories\UserRepository;
 use CLB\Database\Entity;
 use CLB\Database\IdGenerator;
 use CLB\Database\Trait\Timestamps;
+use CLB\Security\PasswordHasher;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -56,6 +57,21 @@ class User extends Entity
     #[ORM\ManyToMany(targetEntity: Permissions::class)]
     private Collection $permissions;
 
+    protected array $fillable = [
+        'username',
+        'email',
+        'password',
+        'firstname',
+        'lastname',
+        'groups',
+        'permissions'
+    ];
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
     /**
      * @return int
      */
@@ -86,8 +102,7 @@ class User extends Entity
      */
     public function setPassword(string $password): void
     {
-        //TODO Hashing
-        $this->password = $password;
+        $this->password = PasswordHasher::hash($password);
     }
 
     /**
@@ -182,4 +197,10 @@ class User extends Entity
     public function checkUserOnDuplicate(LifecycleEventArgs $args){
         $this->checkExistingRecords(['email' => $this->email, 'username' => $this->username], $args);
     }
+
+    public static function repository(): UserRepository
+    {
+        return parent::repository();
+    }
+
 }

@@ -3,9 +3,11 @@
 namespace CLB\Database\Install;
 
 use CLB\Application\ApplicationUtilities;
+use CLB\Core\Application;
 use CLB\Core\Config\Config;
 use CLB\Core\Exceptions\EntityAlreadyExistsException;
 use CLB\Core\Models\Config as ORMConfig;
+use CLB\Core\Models\Permissions;
 use Doctrine\ORM\EntityManager;
 
 class UpdateConfigAfterInstall
@@ -26,20 +28,24 @@ class UpdateConfigAfterInstall
     /**
      * @throws \Throwable
      */
-    public function addBaseConfigValues(): void
+    public function addBaseConfigValues(): bool
     {
-        $app = 'app';
         $this->entityManager->getRepository(ORMConfig::class);
-        try {
-            ORMConfig::create([
-                'app' => $app,
-                'key' => 'version',
-                'value' => $this->utilities->getVersion()
-            ]);
-        } catch (EntityAlreadyExistsException $e) {
 
-        }
+        ORMConfig::create([
+            'app' => Application::$configKey,
+            'key' => 'version',
+            'value' => $this->utilities->getVersion()
+        ]);
 
+        ORMConfig::create([
+            'app' => Application::$configKey,
+            'key' => 'timezone',
+            'value' => $this->utilities->getDefaultTimezone()
+        ]);
 
+        Permissions::repository()->insertDefaultPermissions(Application::$configKey);
+
+        return true;
     }
 }

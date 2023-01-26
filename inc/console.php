@@ -11,20 +11,17 @@ use Doctrine\ORM\ORMSetup;
 use Doctrine\ORM\Tools\Console\ConsoleRunner;
 use Doctrine\ORM\Tools\Console\EntityManagerProvider\SingleManagerProvider;
 use Dotenv\Dotenv;
-use Symfony\Component\Console\Application;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\Migrations\Configuration\Configuration;
-use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Doctrine\Migrations\Tools\Console\Command as DoctrineCommand;
-
 require_once realpath(dirname(__FILE__,2)) . '/vendor/autoload.php';
 const CLB_CONSOLE = 1;
-
 $env = Dotenv::createImmutable(realpath('./'));
 $env->load();
+
 
 //$application = new Application();
 //$application->setName('Collab Console');

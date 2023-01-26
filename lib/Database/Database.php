@@ -71,9 +71,9 @@ class Database implements IDatabase
     /**
      * @throws \Doctrine\ORM\Exception\MissingMappingDriverImplementation
      */
-    public function getEntityManager() : EntityManager|null {
+    public function getEntityManager() : CustomEntityManager|null {
         if(!is_null($this->connection) && is_null($this->entityManager)){
-            $this->entityManager = new EntityManager($this->connection, $this->configuration);
+            $this->entityManager = new CustomEntityManager($this->connection, $this->configuration);
         }
 
         return $this->entityManager;

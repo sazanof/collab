@@ -25,7 +25,9 @@ trait Timestamps
     )]
     private DateTime $updatedAt;
 
-    public function __construct(){
+    #[ORM\PrePersist]
+    public function prePersistSetCreatedAt(): void
+    {
         $this->setCreatedAt();
     }
 

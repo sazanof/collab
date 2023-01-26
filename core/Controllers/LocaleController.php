@@ -2,8 +2,6 @@
 
 namespace CLB\Core\Controllers;
 
-use CLB\File\File;
-
 class LocaleController extends Controller
 {
     protected bool $useTemplateRenderer = false;
